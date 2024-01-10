@@ -59,15 +59,17 @@ class OverlayGenerator:
     def __init__(self,
                  pretrained_model_name_or_path='kha-white/manga-ocr-base',
                  force_cpu=False,
+                 disable_ocr=False,
                  **kwargs):
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         self.force_cpu = force_cpu
         self.kwargs = kwargs
         self.mpocr = None
+        self.disable_ocr = disable_ocr
 
     def init_models(self):
         if self.mpocr is None:
-            self.mpocr = MangaPageOcr(self.pretrained_model_name_or_path, self.force_cpu, **self.kwargs)
+            self.mpocr = MangaPageOcr(self.pretrained_model_name_or_path, self.force_cpu, disable_ocr=self.disable_ocr, **self.kwargs)
 
     def process_dir(self, path, as_one_file=True, mobile=False, is_demo=False):
         path = Path(path).expanduser().absolute()
@@ -97,7 +99,7 @@ class OverlayGenerator:
                 shutil.copy(MOBILE_SCRIPT_PATH, out_dir / 'script.mobile.js')
                 shutil.copy(MOBILE_STYLES_PATH, out_dir / 'styles.mobile.css')
 
-        img_paths = [p for p in path.glob('**/*') if p.is_file() and p.suffix.lower() in ('.jpg', '.jpeg', '.png')]
+        img_paths = [p for p in path.glob('**/*') if p.is_file() and p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp')]
         img_paths = natsorted(img_paths)
 
         page_htmls = []
@@ -108,7 +110,11 @@ class OverlayGenerator:
                 result = load_json(json_path)
             else:
                 self.init_models()
-                result = self.mpocr(img_path)
+                try:
+                    result = self.mpocr(img_path)
+                except Exception as e:
+                    logger.error(f'Failed OCR of file "{img_path}": {e}')
+                    continue
                 json_path.parent.mkdir(parents=True, exist_ok=True)
                 dump_json(result, json_path)
 
