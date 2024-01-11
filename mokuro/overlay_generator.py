@@ -463,7 +463,7 @@ class OverlayGenerator:
         h = ymax - ymin
 
         font_size = result_blk["font_size"]
-        font_size = np.clip(font_size, 12, 32)
+        font_size = np.clip(font_size, 12, 3200)
 
         box_style = {
             'left': xmin,
